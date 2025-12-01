@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Basket-ball – Scores parlants (Firebase RTDB)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <style>
+    :root{
+      --orange:#ff9800;
+      --orange-dark:#e65100;
+      --orange-light:#fff3e0;
+      --green:#2e7d32;
+      --bg:#f5f5f7;
+      --card:#ffffff;
+      --border:#e0e0e0;
+      --text:#222;
+    }
+    *{
+      box-sizing:border-box;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      -webkit-tap-highlight-color:transparent;
+    }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    header{
+      background:linear-gradient(90deg,#ffb300,#ff8f00);
+      color:#fff;
+      padding:1rem 1.5rem;
+      display:flex;
+      align-items:center;
+      gap:1rem;
+      box-shadow:0 2px 4px rgba(0,0,0,.15);
+    }
+    header .logo{
+      width:48px;height:48px;border-radius:50%;
+      border:3px solid #fff;
+      box-shadow:0 2px 4px rgba(0,0,0,.25);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:900;font-size:26px;background:#ff6f00;
+      flex-shrink:0;
+    }
+    header .titles{display:flex;flex-direction:column;}
+    header .titles h1{margin:0;font-size:1.4rem;font-weight:800;}
+    header .titles span{font-size:0.85rem;opacity:.9;}
+
+    nav{
+      display:flex;
+      justify-content:center;
+      gap:0.75rem;
+      margin:1rem auto;
+      max-width:1100px;
+      padding:0 0.75rem;
+      flex-wrap:wrap;
+    }
+    nav button{
+      flex:1 1 150px;
+      padding:0.9rem 1.1rem;
+      border-radius:999px;
+      border:2px solid var(--orange);
+      background:#fff7e6;
+      cursor:pointer;
+      font-size:1rem;
+      font-weight:700;
+      color:var(--orange-dark);
+      transition:transform .1s, box-shadow .1s, background .1s;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:3rem;
+    }
+    nav button:active{
+      transform:scale(0.97);
+      box-shadow:0 2px 6px rgba(0,0,0,.2) inset;
+    }
+    nav button.active{
+      background:var(--orange-dark);
+      color:#fff;
+      border-color:var(--orange-dark);
+      box-shadow:0 4px 10px rgba(0,0,0,.25);
+    }
+
+    main{
+      max-width:1100px;
+      margin:0 auto 3rem;
+      padding:0 0.75rem 2.5rem;
+    }
+    .card{
+      background:var(--card);
+      border-radius:18px;
+      box-shadow:0 6px 16px rgba(0,0,0,.08);
+      padding:1.5rem 1.25rem;
+      margin-top:1rem;
+    }
+    h2{
+      margin-top:0;
+      font-size:1.5rem;
+      display:flex;
+      align-items:center;
+      gap:0.5rem;
+    }
+    .subtle{
+      color:#555;
+      font-size:0.95rem;
+      margin-bottom:1rem;
+      line-height:1.4;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:0.4rem;
+      padding:0.7rem 1.3rem;
+      border-radius:999px;
+      border:2px solid var(--green);
+      color:var(--green);
+      background:#e8f5e9;
+      font-weight:700;
+      font-size:0.95rem;
+      cursor:pointer;
+      min-height:2.7rem;
+      min-width:140px;
+      text-align:center;
+    }
+    .btn-secondary{
+      border-color:#1976d2;
+      color:#1976d2;
+      background:#e3f2fd;
+    }
+    .btn-danger{
+      border-color:#c62828;
+      color:#c62828;
+      background:#ffebee;
+    }
+    .btn:active{
+      transform:scale(0.97);
+      box-shadow:0 2px 6px rgba(0,0,0,.2) inset;
+    }
+    .btn:disabled{
+      opacity:.5;
+      cursor:default;
+      transform:none;
+      box-shadow:none;
+    }
+
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:0.9rem;
+      align-items:center;
+      margin-bottom:0.8rem;
+    }
+    label{
+      font-weight:600;
+      font-size:0.95rem;
+      display:flex;
+      flex-direction:column;
+      gap:0.25rem;
+    }
+    select,input[type="number"],input[type="text"]{
+      padding:0.5rem 0.6rem;
+      border-radius:10px;
+      border:1px solid var(--border);
+      min-width:160px;
+      font-size:0.95rem;
+      background:#fafafa;
+    }
+    input[type="number"]{width:90px;}
+    input[type="text"]{min-width:220px;}
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:0.9rem;
+    }
+    th,td{
+      border:1px solid var(--border);
+      padding:0.5rem 0.4rem;
+      text-align:center;
+    }
+    th{
+      background:#f9f9f9;
+      font-weight:700;
+    }
+
+    .match-teams-highlight{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+      gap:1rem;
+      margin-top:1rem;
+      padding:0.9rem 1.1rem;
+      border-radius:14px;
+      background:var(--orange-light);
+      border:2px solid var(--orange);
+      font-size:1.2rem;
+      font-weight:700;
+      text-align:center;
+    }
+    .match-team-select{
+      font-size:1.05rem;
+      font-weight:600;
+      background:#fffdfa;
+      border:2px solid var(--orange);
+      border-radius:999px;
+      padding:0.45rem 1rem;
+      min-width:150px;
+    }
+    .match-vs{
+      font-size:1.4rem;
+      font-weight:900;
+      color:var(--orange-dark);
+    }
+
+    .courts-wrapper{
+      display:flex;
+      flex-wrap:wrap;
+      gap:1.5rem;
+      margin-top:1.2rem;
+    }
+    .court-card{
+      flex:1 1 320px;
+    }
+    .court-title{
+      font-weight:700;
+      margin-bottom:0.3rem;
+      font-size:1rem;
+    }
+    .court-sub{
+      font-size:0.85rem;
+      color:#666;
+      margin-bottom:0.4rem;
+    }
+    .court{
+      position:relative;
+      width:100%;
+      padding-top:60%;
+      background:#f3e2bd;
+      border-radius:20px;
+      border:4px solid #c58b39;
+      overflow:hidden;
+      cursor:pointer;
+      touch-action:manipulation;
+    }
+    .zone{
+      position:absolute;
+      top:0;
+      bottom:0;
+    }
+    .zone1{left:0;width:33.33%;background:#ffe082;}
+    .zone10{left:33.33%;width:33.34%;background:#b0bec5;}
+    .zone100{right:0;width:33.33%;background:#ffab91;}
+    .zone-label{
+      position:absolute;
+      top:6px;
+      left:8px;
+      font-weight:700;
+      font-size:0.9rem;
+    }
+
+    .basket-side{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      width:22px;
+      height:64px;
+      border:4px solid #c58b39;
+      border-radius:8px;
+      background:rgba(255,255,255,0.18);
+    }
+    .basket-side.left{left:8px;}
+    .basket-side.right{right:8px;}
+    .basket-circle{
+      position:absolute;
+      top:50%;
+      transform:translate(-50%,-50%);
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      border:4px solid #f4511e;
+      background:#fff3e0;
+    }
+    .basket-circle.left{left:34px;}   /* défense = 0 pt */
+    .basket-circle.right{right:-4px;} /* attaque = 1000 pts */
+
+    .court:hover .zone{filter:brightness(1.05);}
+    .zone:hover{outline:3px solid rgba(0,0,0,0.25);}
+    .zone.active{outline:3px solid #2e7d32;}
+    .basket-circle:hover{box-shadow:0 0 0 4px rgba(244,81,30,0.35);}
+
+    .bonus-btn{
+      margin-top:0.7rem;
+      width:100%;
+      text-align:center;
+      padding:0.5rem 0.7rem;
+      background:#e8f5e9;
+      border-radius:12px;
+      border:2px solid var(--green);
+      font-weight:700;
+      cursor:pointer;
+      font-size:0.95rem;
+      min-height:2.6rem;
+    }
+    .bonus-btn:active{
+      transform:scale(0.97);
+      box-shadow:0 2px 6px rgba(0,0,0,.2) inset;
+    }
+
+    .totals-row{
+      margin-top:1rem;
+      font-size:0.95rem;
+      font-weight:600;
+    }
+    .pill{
+      display:inline-block;
+      padding:0.18rem 0.6rem;
+      border-radius:999px;
+      font-size:0.82rem;
+      margin-left:0.3rem;
+      background:#e0f2f1;
+      color:#00695c;
+    }
+    .ratio-bad{background:#ffebee;color:#c62828;}
+    .ratio-mid{background:#fff3e0;color:#f57c00;}
+    .ratio-good{background:#e8f5e9;color:#2e7d32;}
+
+    .details-row{
+      margin-top:0.4rem;
+      font-size:0.82rem;
+    }
+    .details-row table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:0.8rem;
+    }
+
+    .ranking-filters .row{margin-bottom:0.7rem;}
+    .ranking-cards{
+      display:flex;
+      flex-wrap:wrap;
+      gap:1rem;
+      margin-top:1rem;
+    }
+    .ranking-card{
+      flex:1 1 260px;
+      background:#fff8e1;
+      border-radius:18px;
+      padding:1rem 1.2rem;
+      position:relative;
+      overflow:hidden;
+      box-shadow:0 3px 8px rgba(0,0,0,.08);
+    }
+    .ranking-rank{
+      font-weight:700;
+      font-size:1.1rem;
+      margin-bottom:0.2rem;
+    }
+    .ranking-team{
+      font-weight:800;
+      font-size:1.2rem;
+      margin-bottom:0.4rem;
+    }
+    .ranking-points-badge{
+      position:absolute;
+      top:0.7rem;
+      right:0.9rem;
+      background:#ffb74d;
+      color:#4e342e;
+      padding:0.18rem 0.8rem;
+      border-radius:999px;
+      font-weight:700;
+      font-size:0.85rem;
+      box-shadow:0 2px 6px rgba(0,0,0,.15);
+    }
+    .ranking-line{font-size:0.86rem;margin:0.15rem 0;}
+    .ranking-line strong{font-weight:700;}
+    .muted{color:#757575;font-size:0.82rem;}
+    .alert{font-size:0.85rem;color:#c62828;margin-top:0.3rem;}
+
+    @media(max-width:800px){
+      header{
+        padding:0.8rem 1rem;
+      }
+      header .titles h1{font-size:1.2rem;}
+      nav{gap:0.5rem;}
+      nav button{
+        font-size:0.95rem;
+        padding:0.8rem 1rem;
+      }
+      .card{
+        padding:1.2rem 1rem;
+      }
+    }
+
+    @media(max-width:600px){
+      .match-teams-highlight{
+        align-items:flex-start;
+      }
+      .row{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .court{
+        padding-top:70%;
+      }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">🏀</div>
+  <div class="titles">
+    <h1>Basket-ball – Scores parlants</h1>
+    <span>Synchronisé via Firebase Realtime Database</span>
+  </div>
+</header>
+
+<nav>
+  <button id="tab-home" class="active">Accueil</button>
+  <button id="tab-match">Fiche de match</button>
+  <button id="tab-summary">Bilan par terrain</button>
+  <button id="tab-ranking">Classements</button>
+</nav>
+
+<main>
+  <!-- ACCUEIL -->
+  <section id="page-home" class="card">
+    <h2>Mes classes</h2>
+    <p class="subtle">
+      1. Crée / choisis une classe • 2. Configure les équipes • 3. Utilise la fiche de match.<br/>
+      Les données sont stockées dans Firebase (Realtime Database) et partagées entre appareils.
+    </p>
+    <div class="row">
+      <label>Classe sélectionnée
+        <select id="home-class-select"></select>
+      </label>
+      <button class="btn-secondary" id="home-open-teams">Configurer les équipes</button>
+    </div>
+    <div class="row">
+      <label>Nouvelle classe
+        <input id="new-class-name" type="text" placeholder="Ex : 206, 3eB, Term 2..." />
+      </label>
+      <button class="btn" id="btn-add-class">+ Ajouter une classe</button>
+      <button class="btn-danger" id="btn-delete-class">🗑 Supprimer la classe</button>
+    </div>
+    <div id="home-class-info" class="subtle"></div>
+  </section>
+
+  <!-- COMPOSITION DES ÉQUIPES -->
+  <section id="page-teams" class="card" style="display:none;">
+    <h2>Composition des équipes</h2>
+    <p class="subtle" id="teams-class-label"></p>
+    <div id="teams-table"></div>
+    <div class="row" style="margin-top:1rem;">
+      <button class="btn" id="btn-save-teams">✔ Valider les équipes</button>
+      <button class="btn-secondary" id="btn-back-home">← Retour aux classes</button>
+    </div>
+    <div id="teams-message" class="subtle"></div>
+  </section>
+
+  <!-- FICHE DE MATCH -->
+  <section id="page-match" class="card" style="display:none;">
+    <h2>Fiche de match</h2>
+    <div class="subtle">
+      Classe en cours : <strong id="match-class-label">Aucune</strong>
+    </div>
+    <div class="row">
+      <label>Terrain
+        <select id="match-terrain">
+          <option value="terrain1">Terrain 1</option>
+          <option value="terrain2">Terrain 2</option>
+          <option value="terrain3">Terrain 3</option>
+        </select>
+      </label>
+      <label>Leçon
+        <input type="number" id="match-lesson" value="1" min="1" />
+      </label>
+    </div>
+
+    <div class="match-teams-highlight">
+      <label>Équipe A
+        <select id="teamA" class="match-team-select"></select>
+      </label>
+      <span class="match-vs">vs</span>
+      <label>Équipe B
+        <select id="teamB" class="match-team-select"></select>
+      </label>
+    </div>
+
+    <div class="row" style="margin-top:1rem;">
+      <label>Obser. Équipe A par
+        <select id="observerA"></select>
+      </label>
+      <label>Obser. Équipe B par
+        <select id="observerB"></select>
+      </label>
+    </div>
+
+    <div class="courts-wrapper">
+      <!-- COURT A -->
+      <div class="court-card">
+        <div class="court-title">Pertes de balle et tirs – Équipe A</div>
+        <div class="court-sub" id="courtA-sub"></div>
+        <div class="court" id="courtA">
+          <!-- Zone 1 point (panier défendu = 0 pt) -->
+          <div class="zone zone1" data-team="A" data-zone="1">
+            <div class="zone-label">Zone 1 point</div>
+            <div class="basket-side left"></div>
+            <div class="basket-circle left"></div>
+          </div>
+          <!-- Zone 10 points -->
+          <div class="zone zone10" data-team="A" data-zone="10">
+            <div class="zone-label">Zone 10 points</div>
+          </div>
+          <!-- Zone 100 points (panier attaqué = 1000 pts) -->
+          <div class="zone zone100" data-team="A" data-zone="100">
+            <div class="zone-label">Zone 100 points</div>
+            <div class="basket-side right"></div>
+            <!-- Seul ce panier compte 1000 pts -->
+            <div class="basket-circle right" data-team="A" data-shot="1000"></div>
+          </div>
+        </div>
+        <button class="bonus-btn" data-team="A" data-bonus="10000">
+          Panier marqué (+ 10 000 pts)
+        </button>
+        <div class="totals-row" id="totalsA"></div>
+        <div class="details-row" id="detailsA"></div>
+      </div>
+
+      <!-- COURT B -->
+      <div class="court-card">
+        <div class="court-title">Pertes de balle et tirs – Équipe B</div>
+        <div class="court-sub" id="courtB-sub"></div>
+        <div class="court" id="courtB">
+          <!-- Zone 1 point (panier défendu = 0 pt) -->
+          <div class="zone zone1" data-team="B" data-zone="1">
+            <div class="zone-label">Zone 1 point</div>
+            <div class="basket-side left"></div>
+            <div class="basket-circle left"></div>
+          </div>
+          <!-- Zone 10 points -->
+          <div class="zone zone10" data-team="B" data-zone="10">
+            <div class="zone-label">Zone 10 points</div>
+          </div>
+          <!-- Zone 100 points (panier attaqué = 1000 pts) -->
+          <div class="zone zone100" data-team="B" data-zone="100">
+            <div class="zone-label">Zone 100 points</div>
+            <div class="basket-side right"></div>
+            <!-- Seul ce panier compte 1000 pts -->
+            <div class="basket-circle right" data-team="B" data-shot="1000"></div>
+          </div>
+        </div>
+        <button class="bonus-btn" data-team="B" data-bonus="10000">
+          Panier marqué (+ 10 000 pts)
+        </button>
+        <div class="totals-row" id="totalsB"></div>
+        <div class="details-row" id="detailsB"></div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:1.2rem;">
+      <button class="btn" id="btn-save-match">💾 Enregistrer la rencontre</button>
+      <button class="btn-danger" id="btn-reset-match">↺ Réinitialiser le match</button>
+    </div>
+    <div id="match-message" class="subtle"></div>
+  </section>
+
+  <!-- BILAN PAR TERRAIN -->
+  <section id="page-summary" class="card" style="display:none;">
+    <h2>Bilan par terrain</h2>
+    <div class="row">
+      <label>Terrain
+        <select id="summary-terrain">
+          <option value="terrain1">Terrain 1</option>
+          <option value="terrain2">Terrain 2</option>
+          <option value="terrain3">Terrain 3</option>
+        </select>
+      </label>
+      <label>Classe
+        <select id="summary-class"></select>
+      </label>
+      <label>Leçon
+        <select id="summary-lesson">
+          <option value="all">Toutes</option>
+        </select>
+      </label>
+      <button class="btn-secondary" id="btn-refresh-summary">Actualiser</button>
+    </div>
+    <div id="summary-info" class="subtle"></div>
+    <h3>Totaux cumulés par équipe</h3>
+    <div id="summary-totals"></div>
+    <h3 style="margin-top:1.5rem;">Liste des feuilles enregistrées</h3>
+    <div id="summary-list"></div>
+  </section>
+
+  <!-- CLASSEMENTS -->
+  <section id="page-ranking" class="card" style="display:none;">
+    <h2>Classements</h2>
+    <p class="subtle">
+      Classement des équipes par terrain, selon 3 critères : paniers marqués, ratio tirs/attaques,
+      ratio paniers/tirs.<br/>
+      Gagné avec 3 scores = 4 pts • 2 scores = 3 pts • 1 score = 2 pts • 0 score = 1 pt.
+    </p>
+    <div class="ranking-filters">
+      <div class="row">
+        <label>Terrain
+          <select id="ranking-terrain">
+            <option value="terrain1">Terrain 1</option>
+            <option value="terrain2">Terrain 2</option>
+            <option value="terrain3">Terrain 3</option>
+          </select>
+        </label>
+        <label>Classe
+          <select id="ranking-class"></select>
+        </label>
+        <label>Leçon
+          <select id="ranking-lesson">
+            <option value="all">Toutes les leçons</option>
+          </select>
+        </label>
+        <button class="btn-secondary" id="btn-refresh-ranking">Actualiser</button>
+      </div>
+    </div>
+    <div id="ranking-title" class="subtle"></div>
+    <div id="ranking-cards" class="ranking-cards"></div>
+  </section>
+</main>
+
+<!-- Firebase v8 (compat) : App + Realtime Database -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+// ====== CONFIG FIREBASE (projet basket-scoreparlants-fps) ======
+var firebaseConfig = {
+  apiKey: "AIzaSyChnygzIKDLF-dKNmhT47c4KnuPLG07A",
+  authDomain: "basket-scoreparlants-fps.firebaseapp.com",
+  databaseURL: "https://basket-scoreparlants-fps-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "basket-scoreparlants-fps",
+  storageBucket: "basket-scoreparlants-fps.firebasestorage.app",
+  messagingSenderId: "892652072760",
+  appId: "1:892652072760:web:3222b794f2b95fb02fb88d",
+  measurementId: "G-9CX3PVCMR6"
+};
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+var serverTimestamp = firebase.database.ServerValue.TIMESTAMP;
+
+// ========= UTILITAIRES =========
+var TEAMS_DEFAULT = [
+  "ÉQUIPE JAUNE","ÉQUIPE ORANGE","ÉQUIPE BLEU CLAIR","ÉQUIPE BLEU FONCÉ",
+  "ÉQUIPE BLANC","ÉQUIPE NOIR","ÉQUIPE VIOLET","ÉQUIPE VERT","ÉQUIPE ORANGE FLUO"
+];
+
+var currentClassId = null;
+var classesCache = []; // {id,name}
+
+var currentStats = {
+  A:{p1:0,p10:0,p100:0,shot1000:0,basket:0},
+  B:{p1:0,p10:0,p100:0,shot1000:0,basket:0}
+};
+
+function $(id){return document.getElementById(id);}
+function ratio(val,tot){
+  if(!tot||!val) return 0;
+  return Math.round(val*10000/tot)/100;
+}
+function ratioClass(v){
+  if(v>=60) return "ratio-good";
+  if(v>=40) return "ratio-mid";
+  return "ratio-bad";
+}
+function formatDateMs(ms){
+  if(!ms) return "";
+  var d = new Date(ms);
+  return d.toLocaleDateString("fr-FR")+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+}
+function findClassName(id){
+  for(var i=0;i<classesCache.length;i++){
+    if(classesCache[i].id===id) return classesCache[i].name;
+  }
+  return id || "";
+}
+
+// ====== NAVIGATION ======
+var pages = {
+  home:$("page-home"),
+  teams:$("page-teams"),
+  match:$("page-match"),
+  summary:$("page-summary"),
+  ranking:$("page-ranking")
+};
+var tabs = {
+  home:$("tab-home"),
+  match:$("tab-match"),
+  summary:$("tab-summary"),
+  ranking:$("tab-ranking")
+};
+function showPage(name){
+  for(var key in pages){ pages[key].style.display="none"; }
+  pages[name].style.display="block";
+  for(var key2 in tabs){ tabs[key2].classList.remove("active"); }
+  if(name==="home"||name==="teams") tabs.home.classList.add("active");
+  else if(name==="match") tabs.match.classList.add("active");
+  else if(name==="summary") tabs.summary.classList.add("active");
+  else if(name==="ranking") tabs.ranking.classList.add("active");
+}
+tabs.home.onclick = function(){showPage("home");};
+tabs.match.onclick = function(){showPage("match");};
+tabs.summary.onclick = function(){showPage("summary");};
+tabs.ranking.onclick = function(){showPage("ranking");};
+
+// ====== CLASSES ======
+var homeClassSelect = $("home-class-select");
+var newClassInput = $("new-class-name");
+var btnAddClass = $("btn-add-class");
+var btnDeleteClass = $("btn-delete-class");
+var homeOpenTeams = $("home-open-teams");
+var homeClassInfo = $("home-class-info");
+
+function updateClassSelectors(){
+  homeClassSelect.innerHTML="";
+  var optNone=document.createElement("option");
+  optNone.value="";
+  optNone.textContent="(Choisis une classe)";
+  homeClassSelect.appendChild(optNone);
+  classesCache.forEach(function(c){
+    var o=document.createElement("option");
+    o.value=c.id;o.textContent=c.name;
+    homeClassSelect.appendChild(o);
+  });
+  if(currentClassId) homeClassSelect.value=currentClassId;
+
+  var summaryClass=$("summary-class");
+  var rankingClass=$("ranking-class");
+  [summaryClass,rankingClass].forEach(function(sel){
+    sel.innerHTML="";
+    var optAll=document.createElement("option");
+    optAll.value="all";optAll.textContent="Toutes les classes";
+    sel.appendChild(optAll);
+    classesCache.forEach(function(c){
+      var o=document.createElement("option");
+      o.value=c.id;o.textContent=c.name;
+      sel.appendChild(o);
+    });
+    if(currentClassId) sel.value=currentClassId;
+  });
+
+  $("match-class-label").textContent = currentClassId ? findClassName(currentClassId) : "Aucune";
+}
+
+function loadClasses(){
+  return db.ref("classes").once("value")
+    .then(function(snap){
+      classesCache=[];
+      snap.forEach(function(child){
+        var data=child.val() || {};
+        if(data.deleted) return;
+        classesCache.push({id:child.key,name:data.name || "Classe"});
+      });
+      classesCache.sort(function(a,b){return a.name.localeCompare(b.name);});
+      updateClassSelectors();
+    })
+    .catch(function(err){
+      console.error("Erreur chargement classes:",err);
+      alert("Erreur Firebase (classes) : "+err.message);
+    });
+}
+
+homeClassSelect.addEventListener("change",function(){
+  currentClassId = homeClassSelect.value || null;
+  homeClassInfo.textContent = currentClassId ? ("Classe sélectionnée : "+findClassName(currentClassId)) : "";
+  $("match-class-label").textContent = currentClassId ? findClassName(currentClassId) : "Aucune";
+  updateTeamSelectorsForClass();
+});
+
+btnAddClass.addEventListener("click",function(){
+  var name = newClassInput.value.trim();
+  if(!name){
+    alert("Merci de saisir un nom de classe.");
+    return;
+  }
+  db.ref("classes").push({name:name})
+    .then(function(ref){
+      newClassInput.value="";
+      currentClassId=ref.key;
+      return loadClasses();
+    })
+    .then(function(){
+      homeClassSelect.value=currentClassId;
+      $("match-class-label").textContent = findClassName(currentClassId);
+      updateTeamSelectorsForClass();
+    })
+    .catch(function(err){
+      console.error("Erreur ajout classe:",err);
+      alert("Erreur Firebase (ajout classe) : "+err.message);
+    });
+});
+
+btnDeleteClass.addEventListener("click",function(){
+  if(!currentClassId) return;
+  if(!confirm("Supprimer cette classe ? (Les matchs restent, mais la classe sera masquée)")) return;
+  db.ref("classes/"+currentClassId).update({deleted:true})
+    .then(function(){
+      currentClassId=null;
+      return loadClasses();
+    })
+    .then(function(){
+      $("match-class-label").textContent="Aucune";
+      updateTeamSelectorsForClass();
+    })
+    .catch(function(err){
+      console.error("Erreur suppression classe:",err);
+      alert("Erreur Firebase (suppression) : "+err.message);
+    });
+});
+
+homeOpenTeams.addEventListener("click",function(){
+  if(!currentClassId){
+    alert("Choisis d'abord une classe.");
+    return;
+  }
+  openTeamsPageForClass();
+});
+
+// ====== ÉQUIPES ======
+var teamsTableDiv = $("teams-table");
+var teamsClassLabel = $("teams-class-label");
+$("btn-back-home").onclick = function(){showPage("home");};
+
+function getTeamsForClass(){
+  if(!currentClassId) return Promise.resolve([]);
+  return db.ref("classTeams/"+currentClassId).once("value")
+    .then(function(snap){
+      var list=[];
+      snap.forEach(function(child){
+        var d=child.val() || {};
+        list.push({
+          classId: currentClassId,
+          teamKey: child.key,
+          name: d.name || "",
+          pupils: d.pupils || "",
+          terrain: d.terrain || "none"
+        });
+      });
+      list.sort(function(a,b){ return (a.name||"").localeCompare(b.name||""); });
+      return list;
+    })
+    .catch(function(err){
+      console.error("Erreur chargement équipes:",err);
+      alert("Erreur Firebase (équipes) : "+err.message);
+      return [];
+    });
+}
+
+function openTeamsPageForClass(){
+  teamsClassLabel.textContent = "Classe sélectionnée : "+findClassName(currentClassId);
+  renderTeamsTable().then(function(){ showPage("teams"); });
+}
+
+function renderTeamsTable(){
+  return getTeamsForClass().then(function(existing){
+    var byKey={};
+    existing.forEach(function(e){ byKey[e.teamKey]=e; });
+    var html='<table><thead><tr><th>Nom de l\'équipe</th><th>Prénoms (séparés par des virgules)</th><th>Terrain</th></tr></thead><tbody>';
+    TEAMS_DEFAULT.forEach(function(label,idx){
+      var key="team"+(idx+1);
+      var row = byKey[key] || {};
+      var name=row.name || label;
+      var pupils=row.pupils || "";
+      var terrain=row.terrain || "none";
+      html+='<tr>'
+        +'<td><input type="text" data-teamkey="'+key+'" data-field="name" value="'+name.replace(/"/g,"&quot;")+'"></td>'
+        +'<td><input type="text" data-teamkey="'+key+'" data-field="pupils" placeholder="Ex : Uguette, Zoé, Dorian" value="'+pupils.replace(/"/g,"&quot;")+'"></td>'
+        +'<td><select data-teamkey="'+key+'" data-field="terrain">'
+          +'<option value="none"'+(terrain==="none"?" selected":"")+'>Non affectée</option>'
+          +'<option value="terrain1"'+(terrain==="terrain1"?" selected":"")+'>Terrain 1</option>'
+          +'<option value="terrain2"'+(terrain==="terrain2"?" selected":"")+'>Terrain 2</option>'
+          +'<option value="terrain3"'+(terrain==="terrain3"?" selected":"")+'>Terrain 3</option>'
+        +'</select></td>'
+      +'</tr>';
+    });
+    html+="</tbody></table>";
+    teamsTableDiv.innerHTML=html;
+  });
+}
+
+$("btn-save-teams").addEventListener("click",function(){
+  if(!currentClassId) return;
+  var inputs = teamsTableDiv.querySelectorAll("input, select");
+  var map={};
+  inputs.forEach(function(el){
+    var key=el.getAttribute("data-teamkey");
+    var field=el.getAttribute("data-field");
+    if(!map[key]) map[key]={};
+    map[key][field]=el.value;
+  });
+  var dataToSave={};
+  for(var key in map){
+    dataToSave[key]={
+      name: map[key].name || "",
+      pupils: map[key].pupils || "",
+      terrain: map[key].terrain || "none"
+    };
+  }
+  db.ref("classTeams/"+currentClassId).update(dataToSave)
+    .then(function(){
+      $("teams-message").textContent="Équipes enregistrées.";
+      updateTeamSelectorsForClass();
+    })
+    .catch(function(err){
+      console.error("Erreur enregistrement équipes:",err);
+      alert("Erreur Firebase (équipes) : "+err.message);
+    });
+});
+
+// ====== SÉLECTEURS MATCH ======
+function updateTeamSelectorsForClass(){
+  var teamASelect=$("teamA");
+  var teamBSelect=$("teamB");
+  var observerA=$("observerA");
+  var observerB=$("observerB");
+  var terrain=$("match-terrain").value;
+
+  teamASelect.innerHTML="";teamBSelect.innerHTML="";
+  observerA.innerHTML="";observerB.innerHTML="";
+
+  if(!currentClassId){
+    var opt=document.createElement("option");
+    opt.value="";opt.textContent="(Choisis une classe)";
+    [teamASelect,teamBSelect,observerA,observerB].forEach(function(sel){sel.appendChild(opt.cloneNode(true));});
+    return;
+  }
+
+  getTeamsForClass().then(function(teams){
+    var i;
+    var teamsForTerrain = [];
+    for(i=0;i<teams.length;i++){
+      if(teams[i].terrain===terrain) teamsForTerrain.push(teams[i]);
+    }
+    var listForMatch = teamsForTerrain.length?teamsForTerrain:teams;
+
+    if(!listForMatch.length){
+      var opt=document.createElement("option");
+      opt.value="";opt.textContent="(Aucune équipe définie)";
+      [teamASelect,teamBSelect,observerA,observerB].forEach(function(sel){sel.appendChild(opt.cloneNode(true));});
+      return;
+    }
+
+    for(i=0;i<listForMatch.length;i++){
+      var t=listForMatch[i];
+      var o1=document.createElement("option");
+      o1.value=t.name;o1.textContent=t.name;
+      teamASelect.appendChild(o1);
+      var o2=o1.cloneNode(true);
+      teamBSelect.appendChild(o2);
+    }
+
+    for(i=0;i<teams.length;i++){
+      var tt=teams[i];
+      var p1=document.createElement("option");
+      p1.value=tt.name;p1.textContent=tt.name;
+      observerA.appendChild(p1);
+      var p2=p1.cloneNode(true);
+      observerB.appendChild(p2);
+    }
+
+    if(listForMatch[0]) teamASelect.value=listForMatch[0].name;
+    if(listForMatch[1]) teamBSelect.value=listForMatch[1].name;
+    $("courtA-sub").textContent = teamASelect.value ? ("Équipe qui joue : "+teamASelect.value) : "";
+    $("courtB-sub").textContent = teamBSelect.value ? ("Équipe qui joue : "+teamBSelect.value) : "";
+  });
+}
+$("match-terrain").addEventListener("change",updateTeamSelectorsForClass);
+$("teamA").addEventListener("change",function(){
+  $("courtA-sub").textContent = $("teamA").value ? "Équipe qui joue : "+$("teamA").value : "";
+});
+$("teamB").addEventListener("change",function(){
+  $("courtB-sub").textContent = $("teamB").value ? "Équipe qui joue : "+$("teamB").value : "";
+});
+
+// ====== TERRAINS / CLICS + TABLEAU DÉTAIL ======
+function refreshTotals(){
+  var sides=["A","B"];
+  for(var sIdx=0;sIdx<sides.length;sIdx++){
+    var side=sides[sIdx];
+    var s=currentStats[side];
+    var attacks = s.p1+s.p10+s.p100+s.shot1000+s.basket;
+    var shots = s.shot1000+s.basket;
+    var rSA=ratio(shots,attacks);
+    var rBT=ratio(s.basket,shots);
+    var el = side==="A"?$("totalsA"):$("totalsB");
+    var detailEl = side==="A"?$("detailsA"):$("detailsB");
+    var totalPts = s.p1*1 + s.p10*10 + s.p100*100 + s.shot1000*1000 + s.basket*10000;
+
+    el.innerHTML = "Total pts : "+totalPts
+      +'<span class="pill '+ratioClass(rSA)+'">Tirs/attaques : '+(isNaN(rSA)?0:rSA)+' %</span>'
+      +'<span class="pill '+ratioClass(rBT)+'">Paniers/tirs : '+(isNaN(rBT)?0:rBT)+' %</span>';
+
+    detailEl.innerHTML =
+      '<table><thead><tr>'+
+        '<th>P1</th><th>P10</th><th>P100</th><th>Tirs 1000</th><th>Paniers 10 000</th><th>Attaques</th><th>Tirs</th>'+
+      '</tr></thead><tbody><tr>'+
+        '<td>'+s.p1+'</td>'+
+        '<td>'+s.p10+'</td>'+
+        '<td>'+s.p100+'</td>'+
+        '<td>'+s.shot1000+'</td>'+
+        '<td>'+s.basket+'</td>'+
+        '<td>'+attacks+'</td>'+
+        '<td>'+shots+'</td>'+
+      '</tr></tbody></table>';
+  }
+}
+refreshTotals();
+
+["courtA","courtB"].forEach(function(courtId){
+  var courtEl=$(courtId);
+  courtEl.addEventListener("click",function(e){
+    var zoneEl = e.target.closest ? e.target.closest(".zone") : null;
+    var basketCircle = e.target.closest ? e.target.closest(".basket-circle[data-shot]") : null;
+
+    var team = (courtId==="courtA")?"A":"B";
+
+    if(zoneEl){
+      var zone = zoneEl.getAttribute("data-zone");
+      if(zone==="1") currentStats[team].p1++;
+      else if(zone==="10") currentStats[team].p10++;
+      else if(zone==="100") currentStats[team].p100++;
+      var zones = courtEl.querySelectorAll(".zone");
+      for(var i=0;i<zones.length;i++){ zones[i].classList.remove("active"); }
+      zoneEl.classList.add("active");
+    }
+    if(basketCircle){
+      currentStats[team].shot1000++; // tir à 1000 UNIQUEMENT sur panier attaqué
+    }
+    refreshTotals();
+  });
+});
+
+var bonusBtns = document.querySelectorAll(".bonus-btn");
+for(var bb=0;bb<bonusBtns.length;bb++){
+  bonusBtns[bb].addEventListener("click",function(){
+    var team = this.getAttribute("data-team");
+    currentStats[team].basket++;
+    refreshTotals();
+  });
+}
+
+$("btn-reset-match").addEventListener("click",function(){
+  currentStats.A={p1:0,p10:0,p100:0,shot1000:0,basket:0};
+  currentStats.B={p1:0,p10:0,p100:0,shot1000:0,basket:0};
+  refreshTotals();
+  $("match-message").textContent="Match réinitialisé.";
+});
+
+// ====== ENREGISTRER MATCH ======
+$("btn-save-match").addEventListener("click",function(){
+  if(!currentClassId){
+    alert("Choisis d'abord une classe dans l'onglet Accueil.");
+    return;
+  }
+  var teamAName=$("teamA").value;
+  var teamBName=$("teamB").value;
+  if(!teamAName || !teamBName || teamAName===teamBName){
+    alert("Choisis deux équipes différentes pour A et B.");
+    return;
+  }
+  var terrain=$("match-terrain").value;
+  var lesson=parseInt($("match-lesson").value||"1",10);
+  var observerA=$("observerA").value || "";
+  var observerB=$("observerB").value || "";
+
+  var payload={
+    classId:currentClassId,
+    terrain:terrain,
+    lesson:lesson,
+    teamAName:teamAName,
+    teamBName:teamBName,
+    observerA:observerA,
+    observerB:observerB,
+    statsA:{
+      p1:currentStats.A.p1,p10:currentStats.A.p10,p100:currentStats.A.p100,
+      shot1000:currentStats.A.shot1000,basket:currentStats.A.basket
+    },
+    statsB:{
+      p1:currentStats.B.p1,p10:currentStats.B.p10,p100:currentStats.B.p100,
+      shot1000:currentStats.B.shot1000,basket:currentStats.B.basket
+    },
+    createdAt:serverTimestamp
+  };
+
+  db.ref("matchSheets").push(payload)
+    .then(function(){
+      $("match-message").textContent="Rencontre enregistrée.";
+    })
+    .catch(function(err){
+      console.error("Erreur enregistrement match:",err);
+      alert("Erreur Firebase (match) : "+err.message);
+    });
+});
+
+// ====== BILAN PAR TERRAIN ======
+$("btn-refresh-summary").addEventListener("click",loadSummary);
+$("summary-terrain").addEventListener("change",loadSummary);
+$("summary-class").addEventListener("change",loadSummary);
+$("summary-lesson").addEventListener("change",loadSummary);
+
+function loadSummary(){
+  var terrain=$("summary-terrain").value;
+  var classId=$("summary-class").value;
+  var lessonSel=$("summary-lesson");
+
+  db.ref("matchSheets").once("value")
+    .then(function(snap){
+      var allMatches=[];
+      var lessonsSet={};
+      snap.forEach(function(child){
+        var data=child.val() || {};
+        data.id=child.key;
+        if(data.terrain!==terrain) return;
+        if(classId!=="all" && data.classId!==classId) return;
+        var lessonStr=String(data.lesson||1);
+        lessonsSet[lessonStr]=true;
+        allMatches.push(data);
+      });
+
+      var prev = lessonSel.value;
+      lessonSel.innerHTML="";
+      var optAll=document.createElement("option");
+      optAll.value="all";optAll.textContent="Toutes";
+      lessonSel.appendChild(optAll);
+      var keys=Object.keys(lessonsSet).sort(function(a,b){return parseInt(a)-parseInt(b);});
+      for(var k=0;k<keys.length;k++){
+        var v=keys[k];
+        var o=document.createElement("option");
+        o.value=v;o.textContent="Leçon "+v;
+        lessonSel.appendChild(o);
+      }
+      if(prev && lessonSel.querySelector('option[value="'+prev+'"]')) lessonSel.value=prev;
+      else lessonSel.value="all";
+
+      var lessonFilter=lessonSel.value;
+      var filtered=[];
+      for(var i=0;i<allMatches.length;i++){
+        var m=allMatches[i];
+        if(lessonFilter==="all" || String(m.lesson||1)===lessonFilter) filtered.push(m);
+      }
+
+      $("summary-info").textContent = filtered.length
+        ? "Nombre de feuilles enregistrées sur "+terrain+" : "+filtered.length
+        : "Aucune feuille pour ces critères.";
+
+      var totalsByTeam={};
+      filtered.forEach(function(m){
+        function add(teamName,stats){
+          if(!totalsByTeam[teamName]) totalsByTeam[teamName]={matches:0,p1:0,p10:0,p100:0,shot1000:0,basket:0};
+          var t=totalsByTeam[teamName];
+          t.matches++;
+          t.p1+=(stats.p1||0);
+          t.p10+=(stats.p10||0);
+          t.p100+=(stats.p100||0);
+          t.shot1000+=(stats.shot1000||0);
+          t.basket+=(stats.basket||0);
+        }
+        add(m.teamAName,m.statsA||{});
+        add(m.teamBName,m.statsB||{});
+      });
+
+      var htmlTot="";
+      var teamNames=Object.keys(totalsByTeam);
+      if(teamNames.length){
+        htmlTot+='<table><thead><tr><th>Équipe</th><th>Matchs</th><th>Pertes 1 pt</th><th>Pertes 10 pts</th><th>Pertes 100 pts</th><th>Tirs 1000</th><th>Paniers 10 000</th><th>Total pts</th><th>Tirs/attaques</th><th>Paniers/tirs</th></tr></thead><tbody>';
+        teamNames.forEach(function(team){
+          var t=totalsByTeam[team];
+          var attacks = t.p1+t.p10+t.p100+t.shot1000+t.basket;
+          var shots = t.shot1000+t.basket;
+          var rSA=ratio(shots,attacks);
+          var rBT=ratio(t.basket,shots);
+          var totalPts = t.p1*1 + t.p10*10 + t.p100*100 + t.shot1000*1000 + t.basket*10000;
+          htmlTot+='<tr>'
+            +'<td>'+team+'</td>'
+            +'<td>'+t.matches+'</td>'
+            +'<td>'+t.p1+'</td>'
+            +'<td>'+t.p10+'</td>'
+            +'<td>'+t.p100+'</td>'
+            +'<td>'+t.shot1000+'</td>'
+            +'<td>'+t.basket+'</td>'
+            +'<td>'+totalPts+'</td>'
+            +'<td>'+(isNaN(rSA)?0:rSA)+' %</td>'
+            +'<td>'+(isNaN(rBT)?0:rBT)+' %</td>'
+          +'</tr>';
+        });
+        htmlTot+="</tbody></table>";
+      }else{
+        htmlTot="<div class='muted'>Aucun total à afficher.</div>";
+      }
+      $("summary-totals").innerHTML=htmlTot;
+
+      var htmlList="";
+      if(filtered.length){
+        htmlList+='<table><thead><tr><th>Date</th><th>Classe</th><th>Leçon</th><th>Terrain</th><th>Équipe A</th><th>Équipe B</th></tr></thead><tbody>';
+        filtered.sort(function(a,b){
+          var sa = a.createdAt || 0;
+          var sb = b.createdAt || 0;
+          return sb-sa;
+        });
+        filtered.forEach(function(m2){
+          htmlList+='<tr>'
+            +'<td>'+formatDateMs(m2.createdAt)+'</td>'
+            +'<td>'+findClassName(m2.classId)+'</td>'
+            +'<td>'+(m2.lesson||1)+'</td>'
+            +'<td>'+m2.terrain+'</td>'
+            +'<td>'+m2.teamAName+'</td>'
+            +'<td>'+m2.teamBName+'</td>'
+          +'</tr>';
+        });
+        htmlList+="</tbody></table>";
+      }else{
+        htmlList="<div class='muted'>Aucune feuille de match.</div>";
+      }
+      $("summary-list").innerHTML=htmlList;
+    })
+    .catch(function(err){
+      console.error("Erreur bilan:",err);
+      alert("Erreur Firebase (bilan) : "+err.message);
+    });
+}
+
+// ====== CLASSEMENTS ======
+$("btn-refresh-ranking").addEventListener("click",loadRanking);
+$("ranking-terrain").addEventListener("change",loadRanking);
+$("ranking-class").addEventListener("change",loadRanking);
+$("ranking-lesson").addEventListener("change",loadRanking);
+
+function loadRanking(){
+  var terrain=$("ranking-terrain").value;
+  var classId=$("ranking-class").value;
+  var lessonSel=$("ranking-lesson");
+
+  db.ref("matchSheets").once("value")
+    .then(function(snap){
+      var allMatches=[];
+      var lessonsSet={};
+      snap.forEach(function(child){
+        var data=child.val() || {};
+        data.id=child.key;
+        if(data.terrain!==terrain) return;
+        if(classId!=="all" && data.classId!==classId) return;
+        var lessonStr=String(data.lesson||1);
+        lessonsSet[lessonStr]=true;
+        allMatches.push(data);
+      });
+
+      // Remplir le sélecteur "Leçon"
+      var prev=lessonSel.value;
+      lessonSel.innerHTML="";
+      var optAll=document.createElement("option");
+      optAll.value="all";optAll.textContent="Toutes les leçons";
+      lessonSel.appendChild(optAll);
+      var keys=Object.keys(lessonsSet).sort(function(a,b){return parseInt(a)-parseInt(b);});
+      keys.forEach(function(v){
+        var o=document.createElement("option");
+        o.value=v;o.textContent="Leçon "+v;
+        lessonSel.appendChild(o);
+      });
+      if(prev && lessonSel.querySelector('option[value="'+prev+'"]')) lessonSel.value=prev;
+      else lessonSel.value="all";
+
+      // Filtre sur la leçon
+      var lessonFilter=lessonSel.value;
+      var filtered=[];
+      allMatches.forEach(function(m){
+        if(lessonFilter==="all" || String(m.lesson||1)===lessonFilter) filtered.push(m);
+      });
+
+      $("ranking-title").textContent = filtered.length
+        ? "Classement pour "+terrain+" / "+(classId==="all"?"toutes les classes":findClassName(classId))+" / "+(lessonFilter==="all"?"toutes les leçons":"leçon "+lessonFilter)
+        : "Aucun match enregistré pour ces critères.";
+
+      if(!filtered.length){
+        $("ranking-cards").innerHTML="";
+        return;
+      }
+
+      var pointsByTeam={};
+      var statsByTeam={};
+
+      function addTeamStats(name,stats){
+        if(!statsByTeam[name]) statsByTeam[name]={matches:0,p1:0,p10:0,p100:0,shot1000:0,basket:0};
+        var t=statsByTeam[name];
+        t.matches++;
+        t.p1+=(stats.p1||0);
+        t.p10+=(stats.p10||0);
+        t.p100+=(stats.p100||0);
+        t.shot1000+=(stats.shot1000||0);
+        t.basket+=(stats.basket||0);
+      }
+
+      // ⚠️ ICI on applique bien les 3 scores :
+      // 1) résultat du match (score total)
+      // 2) ratio tirs/attaques
+      // 3) ratio paniers/tirs
+      filtered.forEach(function(m2){
+        var aName=m2.teamAName;
+        var bName=m2.teamBName;
+        var sA=m2.statsA || {};
+        var sB=m2.statsB || {};
+
+        addTeamStats(aName,sA);
+        addTeamStats(bName,sB);
+
+        // Totaux de points pour le match (score)
+        var totalA = (sA.p1||0)*1 + (sA.p10||0)*10 + (sA.p100||0)*100 + (sA.shot1000||0)*1000 + (sA.basket||0)*10000;
+        var totalB = (sB.p1||0)*1 + (sB.p10||0)*10 + (sB.p100||0)*100 + (sB.shot1000||0)*1000 + (sB.basket||0)*10000;
+
+        // Baskets (utile pour l’affichage, mais plus critère n°1)
+        var basketsA = sA.basket||0;
+        var basketsB = sB.basket||0;
+
+        // Ratios
+        var attacksA = (sA.p1||0)+(sA.p10||0)+(sA.p100||0)+(sA.shot1000||0)+(sA.basket||0);
+        var attacksB = (sB.p1||0)+(sB.p10||0)+(sB.p100||0)+(sB.shot1000||0)+(sB.basket||0);
+        var shotsA = (sA.shot1000||0)+(sA.basket||0);
+        var shotsB = (sB.shot1000||0)+(sB.basket||0);
+        var rShotAttackA = ratio(shotsA,attacksA); // score 2
+        var rShotAttackB = ratio(shotsB,attacksB);
+        var rBasketShotA = ratio(basketsA,shotsA); // score 3
+        var rBasketShotB = ratio(basketsB,shotsB);
+
+        var winsA=0,winsB=0;
+
+        function compare(v1,v2){
+          if(v1>v2) winsA++;
+          else if(v2>v1) winsB++;
+        }
+
+        // 👉 1) résultat du match = score total
+        compare(totalA,totalB);
+        // 👉 2) ratio tirs/attaques
+        compare(rShotAttackA,rShotAttackB);
+        // 👉 3) ratio paniers/tirs
+        compare(rBasketShotA,rBasketShotB);
+
+        function pointsFor(w){
+          if(w===3) return 4;
+          if(w===2) return 3;
+          if(w===1) return 2;
+          return 1;
+        }
+        var pA=pointsFor(winsA);
+        var pB=pointsFor(winsB);
+
+        pointsByTeam[aName]=(pointsByTeam[aName]||0)+pA;
+        pointsByTeam[bName]=(pointsByTeam[bName]||0)+pB;
+      });
+
+      // Tri des équipes
+      var teams=Object.keys(statsByTeam);
+      teams.sort(function(a,b){
+        var pA=pointsByTeam[a]||0;
+        var pB=pointsByTeam[b]||0;
+        if(pB!==pA) return pB-pA;
+        return a.localeCompare(b);
+      });
+
+      // Affichage
+      var container=$("ranking-cards");
+      container.innerHTML="";
+      teams.forEach(function(teamName,idx){
+        var t=statsByTeam[teamName];
+        var pts=pointsByTeam[teamName]||0;
+        var attacks = t.p1+t.p10+t.p100+t.shot1000+t.basket;
+        var shots = t.shot1000+t.basket;
+        var rSA=ratio(shots,attacks);
+        var rBT=ratio(t.basket,shots);
+        var totalPts = t.p1*1 + t.p10*10 + t.p100*100 + t.shot1000*1000 + t.basket*10000;
+
+        var card=document.createElement("div");
+        card.className="ranking-card";
+        card.innerHTML=
+          '<div class="ranking-rank">'+(idx+1)+'. <span class="ranking-team">'+teamName+'</span></div>'
+         +'<div class="ranking-points-badge">'+pts+' pts</div>'
+         +'<div class="ranking-line"><strong>Matchs :</strong> '+t.matches+'</div>'
+         +'<div class="ranking-line"><strong>Paniers :</strong> '+t.basket+'</div>'
+         +'<div class="ranking-line"><strong>Score total :</strong> '+totalPts+'</div>'
+         +'<div class="ranking-line"><strong>Tirs / attaques :</strong> '+(isNaN(rSA)?0:rSA)+' %</div>'
+         +'<div class="ranking-line"><strong>Paniers / tirs :</strong> '+(isNaN(rBT)?0:rBT)+' %</div>'
+         +'<div class="muted">Points cumulés match par match (4/3/2/1 pts selon les 3 scores).</div>';
+        container.appendChild(card);
+      });
+    })
+    .catch(function(err){
+      console.error("Erreur classements:",err);
+      alert("Erreur Firebase (classements) : "+err.message);
+    });
+}
+
+
+// ====== INIT ======
+(function init(){
+  loadClasses().then(function(){
+    updateTeamSelectorsForClass();
+    loadSummary();
+    loadRanking();
+  });
+})();
+</script>
+</body>
+</html>
