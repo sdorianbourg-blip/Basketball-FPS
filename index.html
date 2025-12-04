@@ -664,6 +664,9 @@ var currentStats = {
   A:{p1:0,p10:0,p100:0,shot1000:0,basket:0},
   B:{p1:0,p10:0,p100:0,shot1000:0,basket:0}
 };
+// Empêcher les doubles enregistrements
+var isSavingMatch = false;   // vrai pendant l'enregistrement
+var canSaveMatch = false;    // vrai seulement si au moins une action a été saisie
 
 function $(id){return document.getElementById(id);}
 function ratio(val,tot){
@@ -987,11 +990,15 @@ $("teamB").addEventListener("change",function(){
 // ====== TERRAINS / CLICS + TABLEAU DÉTAIL ======
 function refreshTotals(){
   var sides=["A","B"];
+  var totalAttacksAll = 0; // pour savoir si le match est vide
+
   for(var sIdx=0;sIdx<sides.length;sIdx++){
     var side=sides[sIdx];
     var s=currentStats[side];
     var attacks = s.p1+s.p10+s.p100+s.shot1000+s.basket;
     var shots = s.shot1000+s.basket;
+    totalAttacksAll += attacks;
+
     var rSA=ratio(shots,attacks);
     var rBT=ratio(s.basket,shots);
     var el = side==="A"?$("totalsA"):$("totalsB");
@@ -1014,6 +1021,18 @@ function refreshTotals(){
         '<td>'+attacks+'</td>'+
         '<td>'+shots+'</td>'+
       '</tr></tbody></table>';
+  }
+
+  // ⚠️ Gestion du bouton "Enregistrer la rencontre"
+  var btn = $("btn-save-match");
+  if(totalAttacksAll > 0){
+    canSaveMatch = true;
+    if(!isSavingMatch){          // on ne réactive pas si on est en train de sauvegarder
+      btn.disabled = false;
+    }
+  }else{
+    canSaveMatch = false;
+    btn.disabled = true;
   }
 }
 refreshTotals();
@@ -1060,6 +1079,17 @@ $("btn-reset-match").addEventListener("click",function(){
 
 // ====== ENREGISTRER MATCH ======
 $("btn-save-match").addEventListener("click",function(){
+  // 1) Empêcher double clic pendant l'enregistrement
+  if(isSavingMatch){
+    return; // on ignore les clics si une sauvegarde est déjà en cours
+  }
+
+  // 2) Empêcher d'enregistrer un match vide
+  if(!canSaveMatch){
+    alert("Il n'y a aucune action à enregistrer pour ce match.");
+    return;
+  }
+
   if(!currentClassId){
     alert("Choisis d'abord une classe dans l'onglet Accueil.");
     return;
@@ -1094,15 +1124,31 @@ $("btn-save-match").addEventListener("click",function(){
     createdAt:serverTimestamp
   };
 
+  // 3) Visuel "en cours"
+  var btn = $("btn-save-match");
+  isSavingMatch = true;
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Enregistrement...";
+
   db.ref("matchSheets").push(payload)
     .then(function(){
       $("match-message").textContent="Rencontre enregistrée.";
+      // Après un enregistrement réussi, on remet le match à zéro :
+      currentStats.A={p1:0,p10:0,p100:0,shot1000:0,basket:0};
+      currentStats.B={p1:0,p10:0,p100:0,shot1000:0,basket:0};
+      isSavingMatch = false;
+      refreshTotals(); // va remettre le bouton en disabled (match vide)
+      btn.innerHTML = "💾 Enregistrer la rencontre";
     })
     .catch(function(err){
       console.error("Erreur enregistrement match:",err);
       alert("Erreur Firebase (match) : "+err.message);
+      isSavingMatch = false;
+      btn.disabled = false;
+      btn.innerHTML = "💾 Enregistrer la rencontre";
     });
 });
+
 
 // ====== BILAN PAR TERRAIN ======
 $("btn-refresh-summary").addEventListener("click",loadSummary);
