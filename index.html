@@ -573,24 +573,26 @@
   <!-- BILAN PAR TERRAIN -->
   <section id="page-summary" class="card" style="display:none;">
     <h2>Bilan par terrain</h2>
-    <div class="row">
-      <label>Terrain
-        <select id="summary-terrain">
-          <option value="terrain1">Terrain 1</option>
-          <option value="terrain2">Terrain 2</option>
-          <option value="terrain3">Terrain 3</option>
-        </select>
-      </label>
-      <label>Classe
-        <select id="summary-class"></select>
-      </label>
-      <label>Leçon
-        <select id="summary-lesson">
-          <option value="all">Toutes</option>
-        </select>
-      </label>
-      <button class="btn-secondary" id="btn-refresh-summary">Actualiser</button>
-    </div>
+      <div class="row">
+    <label>Terrain
+      <select id="summary-terrain">
+        <option value="terrain1">Terrain 1</option>
+        <option value="terrain2">Terrain 2</option>
+        <option value="terrain3">Terrain 3</option>
+      </select>
+    </label>
+    <label>Classe
+      <select id="summary-class"></select>
+    </label>
+    <label>Leçon
+      <select id="summary-lesson">
+        <option value="all">Toutes</option>
+      </select>
+    </label>
+    <button class="btn-secondary" id="btn-refresh-summary">Actualiser</button>
+    <button class="btn" id="btn-export-summary">⬇️ Exporter (Excel)</button>
+  </div>
+
     <div id="summary-info" class="subtle"></div>
     <h3>Totaux cumulés par équipe</h3>
     <div id="summary-totals"></div>
@@ -664,6 +666,9 @@ var currentStats = {
   A:{p1:0,p10:0,p100:0,shot1000:0,basket:0},
   B:{p1:0,p10:0,p100:0,shot1000:0,basket:0}
 };
+// Derniers matchs utilisés dans le bilan (pour l'export Excel)
+var lastSummaryMatches = [];
+
 // Empêcher les doubles enregistrements
 var isSavingMatch = false;   // vrai pendant l'enregistrement
 var canSaveMatch = false;    // vrai seulement si au moins une action a été saisie
@@ -1156,6 +1161,75 @@ $("summary-terrain").addEventListener("change",loadSummary);
 $("summary-class").addEventListener("change",loadSummary);
 $("summary-lesson").addEventListener("change",loadSummary);
 
+$("btn-export-summary").addEventListener("click", function(){
+  if(!lastSummaryMatches.length){
+    alert("Aucun match à exporter pour ces critères.");
+    return;
+  }
+
+  var sep = ";";
+  var lines = [];
+  // En-tête pour Excel
+  lines.push([
+    "date","classe","terrain","lecon",
+    "equipeA","scoreA","ratioTirsAttA","ratioPanTirsA",
+    "equipeB","scoreB","ratioTirsAttB","ratioPanTirsB"
+  ].join(sep));
+
+  lastSummaryMatches.forEach(function(m){
+    var sA = m.statsA || {};
+    var sB = m.statsB || {};
+
+    var totalA = (sA.p1||0)*1 + (sA.p10||0)*10 + (sA.p100||0)*100 + (sA.shot1000||0)*1000 + (sA.basket||0)*10000;
+    var totalB = (sB.p1||0)*1 + (sB.p10||0)*10 + (sB.p100||0)*100 + (sB.shot1000||0)*1000 + (sB.basket||0)*10000;
+
+    var attacksA = (sA.p1||0)+(sA.p10||0)+(sA.p100||0)+(sA.shot1000||0)+(sA.basket||0);
+    var attacksB = (sB.p1||0)+(sB.p10||0)+(sB.p100||0)+(sB.shot1000||0)+(sB.basket||0);
+    var shotsA = (sA.shot1000||0)+(sA.basket||0);
+    var shotsB = (sB.shot1000||0)+(sB.basket||0);
+
+    var rSA = ratio(shotsA,attacksA);
+    var rSB = ratio(shotsB,attacksB);
+    var rBA = ratio((sA.basket||0),shotsA);
+    var rBB = ratio((sB.basket||0),shotsB);
+
+    lines.push([
+      formatDateMs(m.createdAt),
+      findClassName(m.classId),
+      m.terrain,
+      (m.lesson||1),
+      m.teamAName,
+      totalA,
+      isNaN(rSA)?0:rSA,
+      isNaN(rBA)?0:rBA,
+      m.teamBName,
+      totalB,
+      isNaN(rSB)?0:rSB,
+      isNaN(rBB)?0:rBB
+    ].join(sep));
+  });
+
+  var csvContent = lines.join("\n");
+  var blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
+  var url = URL.createObjectURL(blob);
+
+  var terrain = $("summary-terrain").value;
+  var lessonVal = $("summary-lesson").value;
+  var classId = $("summary-class").value;
+
+  var nameParts = ["bilan", terrain];
+  if(classId && classId!=="all") nameParts.push(findClassName(classId));
+  if(lessonVal && lessonVal!=="all") nameParts.push("lecon"+lessonVal);
+
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = nameParts.join("_") + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
 function loadSummary(){
   var terrain=$("summary-terrain").value;
   var classId=$("summary-class").value;
@@ -1247,29 +1321,70 @@ function loadSummary(){
       }
       $("summary-totals").innerHTML=htmlTot;
 
-      var htmlList="";
-      if(filtered.length){
-        htmlList+='<table><thead><tr><th>Date</th><th>Classe</th><th>Leçon</th><th>Terrain</th><th>Équipe A</th><th>Équipe B</th></tr></thead><tbody>';
-        filtered.sort(function(a,b){
-          var sa = a.createdAt || 0;
-          var sb = b.createdAt || 0;
-          return sb-sa;
-        });
-        filtered.forEach(function(m2){
-          htmlList+='<tr>'
-            +'<td>'+formatDateMs(m2.createdAt)+'</td>'
-            +'<td>'+findClassName(m2.classId)+'</td>'
-            +'<td>'+(m2.lesson||1)+'</td>'
-            +'<td>'+m2.terrain+'</td>'
-            +'<td>'+m2.teamAName+'</td>'
-            +'<td>'+m2.teamBName+'</td>'
-          +'</tr>';
-        });
-        htmlList+="</tbody></table>";
-      }else{
-        htmlList="<div class='muted'>Aucune feuille de match.</div>";
-      }
-      $("summary-list").innerHTML=htmlList;
+          // On mémorise les matchs filtrés pour l'export
+    lastSummaryMatches = filtered.slice();
+
+    var htmlList="";
+    if(filtered.length){
+      htmlList+='<table><thead><tr>'
+        +'<th>Date</th>'
+        +'<th>Classe</th>'
+        +'<th>Leçon</th>'
+        +'<th>Terrain</th>'
+        +'<th>Équipe A</th>'
+        +'<th>Score A</th>'
+        +'<th>Tirs/att. A</th>'
+        +'<th>Pan./tirs A</th>'
+        +'<th>Équipe B</th>'
+        +'<th>Score B</th>'
+        +'<th>Tirs/att. B</th>'
+        +'<th>Pan./tirs B</th>'
+      +'</tr></thead><tbody>';
+
+      filtered.sort(function(a,b){
+        var sa = a.createdAt || 0;
+        var sb = b.createdAt || 0;
+        return sb-sa;
+      });
+
+      filtered.forEach(function(m2){
+        var sA = m2.statsA || {};
+        var sB = m2.statsB || {};
+
+        var totalA = (sA.p1||0)*1 + (sA.p10||0)*10 + (sA.p100||0)*100 + (sA.shot1000||0)*1000 + (sA.basket||0)*10000;
+        var totalB = (sB.p1||0)*1 + (sB.p10||0)*10 + (sB.p100||0)*100 + (sB.shot1000||0)*1000 + (sB.basket||0)*10000;
+
+        var attacksA = (sA.p1||0)+(sA.p10||0)+(sA.p100||0)+(sA.shot1000||0)+(sA.basket||0);
+        var attacksB = (sB.p1||0)+(sB.p10||0)+(sB.p100||0)+(sB.shot1000||0)+(sB.basket||0);
+        var shotsA = (sA.shot1000||0)+(sA.basket||0);
+        var shotsB = (sB.shot1000||0)+(sB.basket||0);
+
+        var rSA = ratio(shotsA,attacksA);
+        var rSB = ratio(shotsB,attacksB);
+        var rBA = ratio((sA.basket||0),shotsA);
+        var rBB = ratio((sB.basket||0),shotsB);
+
+        htmlList+='<tr>'
+          +'<td>'+formatDateMs(m2.createdAt)+'</td>'
+          +'<td>'+findClassName(m2.classId)+'</td>'
+          +'<td>'+(m2.lesson||1)+'</td>'
+          +'<td>'+m2.terrain+'</td>'
+          +'<td>'+m2.teamAName+'</td>'
+          +'<td>'+totalA+'</td>'
+          +'<td>'+(isNaN(rSA)?0:rSA)+' %</td>'
+          +'<td>'+(isNaN(rBA)?0:rBA)+' %</td>'
+          +'<td>'+m2.teamBName+'</td>'
+          +'<td>'+totalB+'</td>'
+          +'<td>'+(isNaN(rSB)?0:rSB)+' %</td>'
+          +'<td>'+(isNaN(rBB)?0:rBB)+' %</td>'
+        +'</tr>';
+      });
+      htmlList+="</tbody></table>";
+    }else{
+      htmlList="<div class='muted'>Aucune feuille de match.</div>";
+    }
+    $("summary-list").innerHTML=htmlList;
+
     })
     .catch(function(err){
       console.error("Erreur bilan:",err);
